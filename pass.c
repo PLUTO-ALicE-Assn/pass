@@ -71,7 +71,6 @@ int serveFile(char* filepath, int port)
   sprintf(header,
           "HTTP/1.1 200 OK\n"
           "Content-Length: %li\n"
-          "Accept-Ranges: bytes\n"
           "Content-Disposition: attachment; filename=\"%s\"\n"
           "\n", fileLength, filename);
 
