@@ -5,7 +5,7 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
-
+#include <sys/stat.h>
 #include <unistd.h> /* for close() */
 
 #define BUFFER_SIZE 1024
@@ -45,43 +45,28 @@ char *findFilename(char *filepath)
   return filename;
 }
 
-int serveFile(char* filepath, int port)
+int composeHeader(char* filepath, char* header)
 {
-  FILE *file;
-  long int fileLength;
-
-  /*
-   *  prepare
-   */
-
+  /* get file naem & length and write to header */
   /* get file name */
-  char* filename = findFilename(filepath);
-  if (!filename)
+  char *filename = findFilename(filepath);
+
+  /* get file length */
+
+  off_t fileLength;
+  struct stat statBuffer;
+
+  if (stat(filepath, &statBuffer) != 0 || (!S_ISREG(statBuffer.st_mode)))
   {
-    fprintf(stderr, "file path error\n");
+    perror("checking status of file failed, is it a regular file?");
     return -1;
   }
-
-  /* open file */
-  file = fopen(filepath, "rb");
-  if (!file)
-  {
-    perror("opening file failed");
-    return -1;
-  }
-
-  /* get file length (to compose header) */
-  fseek(file, 0, SEEK_END);
-  fileLength=ftell(file);
-  fseek(file, 0, SEEK_SET);
-
+  fileLength = statBuffer.st_size;
 
   /* compose header */
-  char header[1024];
-
   sprintf(header,
           "HTTP/1.1 200 OK\n"
-          "Content-Length: %li\n"
+          "Content-Length: %lli\n"
           "Accept-Ranges: none\n"
           "Content-Disposition: attachment; filename=\"%s\"\n"
           "\n", fileLength, filename);
@@ -89,6 +74,23 @@ int serveFile(char* filepath, int port)
   /* do not need filename anymore */
   free(filename);
 
+  return 0;
+}
+
+int serveFile(char* filepath, int port)
+{
+
+  /*
+   *  prepare
+   */
+
+  char header[512];
+
+  if (composeHeader(filepath, header) < 0)
+  {
+    fprintf(stderr, "header composition failed");
+    return -1;
+  }
 
   /*
    *  tranfer
@@ -137,9 +139,16 @@ int serveFile(char* filepath, int port)
       write(clientSocket, header, strlen(header));
 
       size_t bytesRead = 0;
-      int bytesWrote = 0; /* write() return -1 on error */
+      int bytesWrote = 0; /* could be negative, write() return -1 on error */
 
       char buffer[BUFFER_SIZE];
+
+      FILE *file = fopen(filepath, "rb");
+      if (!file)
+      {
+        perror("opening file failed");
+        return -1;
+      }
 
       /* set file pointer back */
       fseek(file, 0, SEEK_SET);
@@ -150,7 +159,7 @@ int serveFile(char* filepath, int port)
         bytesWrote = write(clientSocket, buffer, BUFFER_SIZE);
         if (bytesWrote < 0)
         {
-          perror("write failed");
+          perror("writing failed");
           fseek(file, 0, SEEK_SET);
           exit(-1);
         }
