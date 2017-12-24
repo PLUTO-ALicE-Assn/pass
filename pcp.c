@@ -69,7 +69,7 @@ int main()
   struct sockaddr_in sockaddress;
   sockaddress.sin_family = AF_INET;
   sockaddress.sin_port = htons(port); /* host to network short */
-  sockaddress.sin_addr.s_addr = address;
+  sockaddress.sin_addr.s_addr = (in_addr_t) address;
 
   /* start pcp 3600 is lifetime in seconds */
   pcp_flow_t *flow = pcp_new_flow(pcpCXT, (struct sockaddr*) &sockaddress, NULL, NULL, AF_INET, 3600, NULL);

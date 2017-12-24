@@ -51,7 +51,7 @@ int serveFile(char* filepath, int port)
   long int fileLength;
 
   /*
-   * prepare
+   *  prepare
    */
 
   /* get file name */
@@ -91,7 +91,7 @@ int serveFile(char* filepath, int port)
 
 
   /*
-   * tranfer
+   *  tranfer
    */
 
   /* create socket */
