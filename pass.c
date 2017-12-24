@@ -180,5 +180,6 @@ int main(int argc, char *argv[])
 
   printf("serving  %s  on port  %d\n"
          "keyboard interrupt to kill\n", filepath, port);
-  serveFile(filepath, port);
+
+  if (serveFile(filepath, port) < 0) return -1;
 }
