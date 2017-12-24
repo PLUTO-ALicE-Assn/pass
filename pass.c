@@ -18,14 +18,11 @@
  */
 
 /* find file name from path */
-/* file name have to be shorter than 512 characters*/
-/* remember to deallocate memory */
-char *findFilename(char *filepath)
+int findFilename(char *filepath, char* filename)
 {
   size_t pt;
   size_t filenamePt = 0;
   char ch;
-  char *filename = (char*) malloc(512);
 
   for (pt = 0; pt < strlen(filepath); pt++)
   {
@@ -35,14 +32,14 @@ char *findFilename(char *filepath)
 
     if(ch == '/')
     {
-      bzero(filename, 512);
+      bzero(filename, strlen(filename + 1));
       filenamePt = 0;
     }
   }
 
   filename[filenamePt + 1] = '\0';
 
-  return filename;
+  return 0;
 }
 
 int expandFilePath(char* filepath)
@@ -65,7 +62,10 @@ int composeHeader(char* filepath, char* header)
 
   /* get file naem & length and write to header */
   /* get file name */
-  char *filename = findFilename(filepath);
+  /* file name have to be shorter than 512 characters*/
+  char filename[512];
+
+  findFilename(filepath, filename);
 
   /* get file length */
 
@@ -86,9 +86,6 @@ int composeHeader(char* filepath, char* header)
           "Accept-Ranges: none\n"
           "Content-Disposition: attachment; filename=\"%s\"\n"
           "\n", fileLength, filename);
-
-  /* do not need filename anymore */
-  free(filename);
 
   return 0;
 }
