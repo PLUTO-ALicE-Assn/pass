@@ -13,7 +13,7 @@
 /* TODO: implement ranges
  * TODO: support multi-threading downloads
  * TODO: add error checks
- *
+ * TODO: graceful shutdown
  *
  */
 
