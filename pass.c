@@ -139,7 +139,7 @@ int serveFile(char* filepath, int port)
       write(clientSocket, header, strlen(header));
 
       size_t bytesRead = 0;
-      int bytesWrote = 0; /* could be negative, write() return -1 on error */
+      long int bytesWrote = 0; /* could be negative, write() return -1 on error */
 
       char buffer[BUFFER_SIZE];
 
