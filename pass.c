@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
-
-#include <string.h>
 
 #include <unistd.h> /* for close() */
 
@@ -50,6 +50,10 @@ int serveFile(char* filepath, int port)
   FILE *file;
   long int fileLength;
 
+  /*
+   * prepare
+   */
+
   /* get file name */
   char* filename = findFilename(filepath);
   if (!filename)
@@ -62,11 +66,11 @@ int serveFile(char* filepath, int port)
   file = fopen(filepath, "rb");
   if (!file)
   {
-    fprintf(stderr, "file open error\n");
+    perror("opening file failed");
     return -1;
   }
 
-  /* get file length */
+  /* get file length (to compose header) */
   fseek(file, 0, SEEK_END);
   fileLength=ftell(file);
   fseek(file, 0, SEEK_SET);
@@ -84,8 +88,18 @@ int serveFile(char* filepath, int port)
   /* do not need filename anymore */
   free(filename);
 
+
+  /*
+   * tranfer
+   */
+
   /* create socket */
   int socketfd = socket(PF_INET, SOCK_STREAM, 0);
+  if (socketfd < 0)
+  {
+    perror("creating socket failed");
+    return -1;
+  }
 
   /* configure socket */
   struct sockaddr_in address;
@@ -98,13 +112,13 @@ int serveFile(char* filepath, int port)
   /* bind & listen */
   if(bind(socketfd, (struct sockaddr*) &address, sizeof(address)) != 0)
   {
-    fprintf(stderr, "bind error\n");
+    perror("binding failed");
     return -1;
   }
 
   if (listen(socketfd, 16)!=0)
   {
-    fprintf(stderr, "listen error\n");
+    perror("listening failed");
     return -1;
   }
 
