@@ -148,7 +148,7 @@ int serveFile(char* filepath, int port)
 
 int main(int argc, char *argv[])
 {
-  if (strcmp(argv[1], "-h"))
+  if (strcmp(argv[1], "-h") == 0)
   {
     puts("format: pass <filepath> <port>");
     puts("file name(not path) must not exceed 512 characters");
