@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
+#include <wordexp.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/stat.h>
@@ -45,8 +45,24 @@ char *findFilename(char *filepath)
   return filename;
 }
 
+int expandFilePath(char* filepath)
+{
+  wordexp_t wordExpand;
+
+  if (wordexp(filepath, &wordExpand, 0) != 0)
+  {
+    perror("expanding file path failed");
+    return -1;
+  }
+
+  filepath = wordExpand.we_wordv[0];
+  return 0;
+}
+
 int composeHeader(char* filepath, char* header)
 {
+  if (expandFilePath(filepath) != 0) return -1;
+
   /* get file naem & length and write to header */
   /* get file name */
   char *filename = findFilename(filepath);
@@ -79,6 +95,7 @@ int composeHeader(char* filepath, char* header)
 
 int serveFile(char* filepath, int port)
 {
+  if (expandFilePath(filepath) != 0) return -1;
 
   /*
    *  prepare
