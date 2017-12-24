@@ -1,0 +1,8 @@
+*
+
+!.gitignore
+
+!readme.org
+
+!pass.c
+!pcp.c

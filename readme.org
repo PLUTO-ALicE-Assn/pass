@@ -1,0 +1,30 @@
+#+TITLE: Pass
+
+a file transfer tool.
+point to point, no server needed.
+
+* Build
+
+* Usage
+
+#+BEGIN_SRC shell
+$ pass <file-path> <port>
+
+serving <file-name> on <address:port>
+file name(not path) cannot exceed 512 characters
+keyboard interrupt to kill
+#+END_SRC
+
+As prompt says, file name(not path) cannot exceed 512 characters.
+
+Open a downloaded or web browser and go to <address:port>.
+
+* Safety
+
+TCP socket is used  so there is no encryption.
+
+
+* P.S.
+https://github.com/kern/filepizza got a fun cartoon.
+
+
