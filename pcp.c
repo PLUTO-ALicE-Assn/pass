@@ -34,7 +34,7 @@ const long int getInternalAddress(char* interface, sa_family_t ipVersion)
     family = ifaddr->ifa_addr->sa_family;
     interfaceName = ifaddr->ifa_name;
 
-    if (!family || family != ipVersion || strcmp(interfaceName, interface)) continue;
+    if (!family || family != ipVersion || strcmp(interfaceName, interface) != 0) continue;
 
     struct sockaddr *addr = ifaddr->ifa_addr;
     struct sockaddr_in* addr_in = (struct sockaddr_in*) addr;
