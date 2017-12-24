@@ -10,6 +10,13 @@
 
 #define BUFFER_SIZE 1024
 
+/* TODO: implement ranges
+ * TODO: support multi-threading downloads
+ * TODO: add error checks
+ *
+ *
+ */
+
 /* find file name from path */
 /* file name have to be shorter than 512 characters*/
 /* remember to deallocate memory */
