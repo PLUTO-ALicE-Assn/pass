@@ -137,12 +137,26 @@ int serveFile(char* filepath, int port)
       write(clientSocket, header, strlen(header));
 
       size_t bytesRead = 0;
+      int bytesWrote = 0; /* write() return -1 on error */
+
       char buffer[BUFFER_SIZE];
+
+      /* set file pointer back */
+      fseek(file, 0, SEEK_SET);
 
       /* send file in chunks */
       while ((bytesRead = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
       {
-        write(clientSocket, buffer, BUFFER_SIZE);
+        bytesWrote = write(clientSocket, buffer, BUFFER_SIZE);
+        if (bytesWrote < 0)
+        {
+          perror("write failed");
+          fseek(file, 0, SEEK_SET);
+          exit(-1);
+        }
+        /* if write() didn't write BUFFER_SIZE bytes, go back n bytes */
+        /* TODO: test this */
+        fseek(file, (bytesWrote - BUFFER_SIZE), SEEK_CUR);
       }
 
       /* set file pointer back */
