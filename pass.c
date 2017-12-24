@@ -155,7 +155,7 @@ int serveFile(char* filepath, int port)
           exit(-1);
         }
         /* if write() didn't write BUFFER_SIZE bytes, go back n bytes */
-        /* TODO: test this */
+        /* TODO: test this. Works normally, but not sure when bytesWrote is not same as BUFFER_SIZE */
         fseek(file, (bytesWrote - BUFFER_SIZE), SEEK_CUR);
       }
 
