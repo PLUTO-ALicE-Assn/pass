@@ -148,6 +148,14 @@ int serveFile(char* filepath, int port)
 
 int main(int argc, char *argv[])
 {
+  if (strcmp(argv[1], "-h"))
+  {
+    puts("format: pass <filepath> <port>");
+    puts("file name(not path) must not exceed 512 characters");
+    puts("keyboard interrupt to kill");
+    return 0;
+  }
+
   if (argc < 3 || argc > 3)
   {
     fprintf(stderr, "needs 2 arguments: file path & port\n");
@@ -156,8 +164,7 @@ int main(int argc, char *argv[])
   char *filepath = argv[1];
   int port = atoi(argv[2]);
 
-  printf("serving %s on port %d\n"
-       "file name(not path) cannot exceed 512 characters\n"
+  printf("serving  %s  on port  %d\n"
          "keyboard interrupt to kill\n", filepath, port);
   serveFile(filepath, port);
 }
