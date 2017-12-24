@@ -8,6 +8,8 @@
 
 #include <unistd.h> /* for close() */
 
+#define BUFFER_SIZE 1024
+
 /* find file name from path */
 /* file name have to be shorter than 512 characters*/
 /* remember to deallocate memory */
@@ -39,9 +41,7 @@ char *findFilename(char *filepath)
 int serveFile(char* filepath, int port)
 {
   FILE *file;
-  char *buffer;
   long int fileLength;
-  size_t bufferSize;
 
   /* get file name */
   char* filename = findFilename(filepath);
@@ -50,8 +50,6 @@ int serveFile(char* filepath, int port)
     fprintf(stderr, "file path error\n");
     return -1;
   }
-
-
 
   /* open file */
   file = fopen(filepath, "rb");
@@ -65,20 +63,7 @@ int serveFile(char* filepath, int port)
   fseek(file, 0, SEEK_END);
   fileLength=ftell(file);
   fseek(file, 0, SEEK_SET);
-  bufferSize = fileLength + 1;
 
-  /* allocate memory */
-  buffer=(char *)malloc(bufferSize);
-  if (!buffer)
-  {
-      fprintf(stderr, "allocate memory error\n");
-      fclose(file);
-      return -1;
-  }
-
-  /* read file */
-  fread(buffer, fileLength, 1, file);
-  fclose(file);
 
   /* compose header */
   char header[1024];
@@ -127,8 +112,21 @@ int serveFile(char* filepath, int port)
 
     if (fork() == 0)
     {
+      /* send header */
       write(clientSocket, header, strlen(header));
-      write(clientSocket, buffer, bufferSize);
+
+      size_t bytesRead = 0;
+      char buffer[BUFFER_SIZE];
+
+      /* send file in chunks */
+      while ((bytesRead = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
+      {
+        write(clientSocket, buffer, BUFFER_SIZE);
+      }
+
+      /* set file pointer back */
+      fseek(file, 0, SEEK_SET);
+
       exit(0);
     }
     else
@@ -136,6 +134,8 @@ int serveFile(char* filepath, int port)
       close(clientSocket);
     }
   }
+
+  /* never close file  */
 
 }
 
