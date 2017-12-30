@@ -7,8 +7,15 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h> /* for close() */
+#ifdef __linux__
+#include <sys/sendfile.h>
+#endif
+#ifdef __APPLE__
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <sys/types.h>
+#endif
 
-#define BUFFER_SIZE 1024
 
 /* TODO: implement ranges
  * TODO: support multi-threading downloads
@@ -17,8 +24,105 @@
  *
  */
 
+#define RIO_BUFSIZE 1024
+#define BUFFER_SIZE 1024
+#define MAXLINE 1024
+#define MAX_FILENAME 512
+
+#define REQUIRE_RANGE_TRUE 1
+#define  REQUIRE_RANGE_FALSE 0
+
+typedef struct
+{
+  int RIOfd;                 /* descriptor for this buf */
+  off_t RIOrest;                /* unread byte in this buf */
+  char *RIObufferPTR;           /* next unread byte in this buf */
+  char RIObuffer[RIO_BUFSIZE];  /* internal buffer */
+} riobuffer_t;
+
+typedef struct {
+  off_t offset;              /* for support Range */
+  off_t end;
+  int requireRange;
+} httpRquest;
+
+void RIOreadInitBuffer(riobuffer_t *rp, int fd)
+{
+  rp->RIOfd = fd;
+  rp->RIOrest = 0;
+  rp->RIObufferPTR = rp->RIObuffer;
+}
+
+ssize_t RIOread(riobuffer_t *rp, char *usrbuf, ssize_t n)
+{
+  int rest;
+
+  while(rp->RIOrest <= 0) /* refill if buffer is empty */
+  {
+    rp->RIOrest = read(rp->RIOfd, rp->RIObuffer, sizeof(rp->RIObuffer));
+    if (rp->RIOrest < 0) /* Interrupted by sig handler return */
+    {
+      if (errno != EINTR) return -1;
+      else if (rp->RIOrest == 0) return 0; /* EOF */
+      else rp->RIObufferPTR = rp->RIObuffer; /* reset buffer ptr */
+    }
+  }
+
+  /* Copy min(n, rp->rio_cnt) bytes from internal buf to user buf */
+  rest = n;
+  if (rp->RIOrest < n) rest = rp->RIOrest;
+  memcpy(usrbuf, rp->RIObufferPTR, rest);
+  rp->RIObufferPTR += rest;
+  rp->RIOrest -= rest;
+  return rest;
+}
+
+ssize_t RIOreadlineB(riobuffer_t *rp, void *usrbuf, size_t maxlen)
+{
+  int n, readCount;
+  char c, *bufferPTR = usrbuf;
+
+  for (n = 1; (size_t) n < maxlen; n++)
+  {
+    if ((readCount = RIOread(rp, &c, 1)) == 1)
+    {
+      *bufferPTR++ = c;
+      if (c == '\n') break;
+    }
+    else if (readCount == 0)
+    {
+      if (n == 1) return 0; /* EOF, no data read */
+      else break;    /* EOF, some data was read */
+    }
+    else return -1;    /* error */
+  }
+  *bufferPTR = 0;
+  return n;
+}
+
+ssize_t RIOwriteN(int fd, void *usrbuf, size_t n)
+{
+  size_t nleft = n;
+  ssize_t numberWritten;
+  char *bufferPTR = usrbuf;
+
+  while (nleft > 0)
+  {
+    if ((numberWritten = write(fd, bufferPTR, nleft)) <= 0)
+    {
+      if (errno == EINTR)  /* interrupted by sig handler return */
+        numberWritten = 0;    /* and call write() again */
+      else return -1;       /* errorno set by write() */
+    }
+    nleft -= numberWritten;
+    bufferPTR += numberWritten;
+  }
+  return n;
+}
+
+
 /* find file name from path */
-int findFilename(char *filepath, char* filename)
+void findFilename(char *filepath, char* filename)
 {
   size_t pt;
   size_t filenamePt = 0;
@@ -29,181 +133,213 @@ int findFilename(char *filepath, char* filename)
     ch = filepath[pt];
     filename[filenamePt] = ch;
     filenamePt++;
-
     if(ch == '/')
     {
-      bzero(filename, strlen(filename + 1));
+      bzero(filename, sizeof(&filename));
       filenamePt = 0;
     }
+    printf("filename: %s\n", filename);
   }
 
   filename[filenamePt + 1] = '\0';
-
-  return 0;
 }
 
-int expandFilePath(char* filepath)
+void errorExit(char* text)
+{
+  perror(text);
+  exit(0);
+}
+
+void expandFilePath(char* filepath)
 {
   wordexp_t wordExpand;
 
   if (wordexp(filepath, &wordExpand, 0) != 0)
-  {
-    perror("expanding file path failed");
-    return -1;
-  }
-
+    errorExit("expanding file path failed");
   filepath = wordExpand.we_wordv[0];
-  return 0;
 }
 
-int composeHeader(char* filepath, char* header)
+
+void readHeaderFromClient(int socketFD, httpRquest *request)
 {
-  if (expandFilePath(filepath) != 0) return -1;
+  char buffer[MAXLINE], method[MAXLINE], url[MAXLINE], version[MAXLINE];
 
-  /* get file naem & length and write to header */
-  /* get file name */
-  /* file name have to be shorter than 512 characters*/
-  char filename[512];
+  riobuffer_t rioBuffer;
+  RIOreadInitBuffer(&rioBuffer, socketFD);
+  sscanf(buffer, "%s %s %s", method, url, version);
+  /* TODO check version and method */
 
-  findFilename(filepath, filename);
+  request->requireRange = REQUIRE_RANGE_FALSE;
+  request->offset = 0;
+  request->end = 0;
+  while (buffer[0] != '\n' && buffer[1] != '\n')
+  {
+    RIOreadlineB(&rioBuffer, buffer, MAXLINE);
+    if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
+    {
+      request->requireRange = REQUIRE_RANGE_TRUE;
+      sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end);
+    }
+  }
+}
 
-  /* get file length */
 
+off_t getFileLength(char *filepath)
+{
   off_t fileLength;
   struct stat statBuffer;
 
   if (stat(filepath, &statBuffer) != 0 || (!S_ISREG(statBuffer.st_mode)))
-  {
-    perror("checking status of file failed, is it a regular file?");
-    return -1;
-  }
+    errorExit("checking status of file failed, is it a regular file?");
+
   fileLength = statBuffer.st_size;
-
-  /* compose header */
-  sprintf(header,
-          "HTTP/1.1 200 OK\n"
-          "Content-Length: %lli\n"
-          "Accept-Ranges: none\n"
-          "Content-Disposition: attachment; filename=\"%s\"\n"
-          "\n", fileLength, filename);
-
-  return 0;
+  return fileLength;
 }
 
-int serveFile(char* filepath, int port)
+void composeHeader(char *header, httpRquest *request, char *filepath)
 {
-  if (expandFilePath(filepath) != 0) return -1;
+  /* file name have to be shorter than MAX_FILENAME(1024) characters*/
+  char filename[MAX_FILENAME];
+  findFilename(filepath, filename);
 
-  /*
-   *  prepare
-   */
+  off_t fileLength;
+  fileLength = getFileLength(filepath);
+  if (fileLength < 0) errorExit("getting file length failed");
 
-  char header[512];
-
-  if (composeHeader(filepath, header) < 0)
+  if (request->requireRange == REQUIRE_RANGE_FALSE)
   {
-    fprintf(stderr, "header composition failed");
-    return -1;
+    sprintf(header,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: %lld\r\n"
+            "Accept-Ranges: bytes\r\n"
+            "Content-Disposition: attachment; filename=\"%s\"\r\n"
+            "\r\n", fileLength, filename);
+  } else if (request->requireRange == REQUIRE_RANGE_TRUE)
+  {
+    sprintf(header,
+            "HTTP/1.1 206 Partial\r\n"
+            "Content-Disposition: attachment; filename=\"%s\"\r\n"
+            "Range: bytes=%lld-%lld/%lld\r\n"
+            "Content-Length: %lld\r\n"
+            "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset);
   }
+  puts(header);
+}
 
-  /*
-   *  tranfer
-   */
+#ifdef __APPLE__
+void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
+{
+  FILE *file = fopen(filepath, "rb");
+  if (!file) errorExit("failed to open file");
 
+  if (request->end == 0)
+    request->end = getFileLength(filepath);
+
+  off_t totalSize = request->end - request->offset;
+  off_t offset = request->offset;
+  off_t totalBytesSent = 0;
+  off_t len = BUFFER_SIZE;
+  int ret;
+
+  /* send file in chunks */
+  while (totalBytesSent < totalSize)
+  {
+    if ((totalSize - totalBytesSent) < BUFFER_SIZE)
+      len = totalSize - totalBytesSent;
+
+    ret = sendfile(fileno(file), clientSocketFD, offset, &len, NULL, 0);
+    if (ret < 0) errorExit("failed to send file");
+    totalBytesSent += len;
+    offset += len;
+  }
+}
+#endif
+
+#ifdef __linux__
+void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
+{
+  FILE *file = fopen(filepath, "rb");
+  if (!file) errorExit("failed to open file");
+
+  off_t bytesLeftToSend = request->end - request->offset;
+  off_t offset = request->offset;
+  off_t bytesSentInOneAction = 0;
+  off_t len = BUFFER_SIZE;
+  while ()
+  {
+    if (bytesLeftToSend < BUFFER_SIZE) len = bytesLeftToSend;
+    bytesSentInOneAction = sendfile(fileno(file), clientSocketFD, offset, len);
+    if (bytesSentInOneAction < 0) errorExit("failed to send file");
+    bytesLeftToSend -= bytesSentInOneAction;
+    offset += bytesSentInOneAction;
+  }
+}
+#endif
+
+void serveFile(int clientSocketFD, char *filepath)
+{
+  httpRquest request;
+
+  readHeaderFromClient(clientSocketFD, &request);
+
+  char header[BUFFER_SIZE];
+  composeHeader(header, &request, filepath);
+  write(clientSocketFD, header, strlen(header));
+
+  sendFile(filepath, clientSocketFD, &request);
+}
+
+void initListening(int socketFD, struct sockaddr_in *address, int port)
+{
   /* create socket */
-  int socketfd = socket(PF_INET, SOCK_STREAM, 0);
-  if (socketfd < 0)
-  {
-    perror("creating socket failed");
-    return -1;
-  }
+  if (socketFD < 0)
+    errorExit("creating socket failed");
 
   /* configure socket */
-  struct sockaddr_in address;
 
-  bzero(&address, sizeof(address));
-  address.sin_family = AF_INET;
-  address.sin_port = htons(port); /* host to network short */
-  address.sin_addr.s_addr = INADDR_ANY;
+  address->sin_family = AF_INET;
+  address->sin_port = htons(port); /* host to network short */
+  address->sin_addr.s_addr = INADDR_ANY;
 
   /* bind & listen */
-  if(bind(socketfd, (struct sockaddr*) &address, sizeof(address)) != 0)
-  {
-    perror("binding failed");
-    return -1;
-  }
+  if(bind(socketFD, (struct sockaddr*) address, sizeof(*address)) != 0)
+    errorExit("binding failed");
 
-  if (listen(socketfd, 16)!=0)
-  {
-    perror("listening failed");
-    return -1;
-  }
+  if (listen(socketFD, 16)!=0) errorExit("listening failed");
+}
+
+void serve(char* filepath, int port)
+{
+  int socketFD = socket(PF_INET, SOCK_STREAM, 0);
+  struct sockaddr_in address;
+  initListening(socketFD, &address, port);
 
   /* accept client */
-  while (1)
+  for (;;)
   {
     socklen_t size = sizeof(address);
-    int clientSocket = accept(socketfd, (struct sockaddr*) &address, &size);
+    int clientSocketFD = accept(socketFD, (struct sockaddr*) &address, &size);
 
     puts("client connected");
 
     if (fork() == 0)
     {
-      /* send header */
-      write(clientSocket, header, strlen(header));
-
-      size_t bytesRead = 0;
-      long int bytesWrote = 0; /* could be negative, write() return -1 on error */
-
-      char buffer[BUFFER_SIZE];
-
-      FILE *file = fopen(filepath, "rb");
-      if (!file)
-      {
-        perror("opening file failed");
-        return -1;
-      }
-
-      /* set file pointer back */
-      fseek(file, 0, SEEK_SET);
-
-      /* send file in chunks */
-      while ((bytesRead = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
-      {
-        bytesWrote = write(clientSocket, buffer, BUFFER_SIZE);
-        if (bytesWrote < 0)
-        {
-          perror("writing failed");
-          fseek(file, 0, SEEK_SET);
-          exit(-1);
-        }
-        /* if write() didn't write BUFFER_SIZE bytes, go back n bytes */
-        /* TODO: test this. Works normally, but not sure when bytesWrote is not same as BUFFER_SIZE */
-        fseek(file, (bytesWrote - BUFFER_SIZE), SEEK_CUR);
-      }
-
-      /* set file pointer back */
-      fseek(file, 0, SEEK_SET);
-
+      serveFile(clientSocketFD, filepath);
       exit(0);
     }
     else
     {
-      close(clientSocket);
+      close(clientSocketFD);
     }
   }
-
-  /* never close file  */
-
 }
-
 
 int main(int argc, char *argv[])
 {
   if (strcmp(argv[1], "-h") == 0)
   {
     puts("format: pass <filepath> <port>");
-    puts("file name(not path) must not exceed 512 characters");
+    puts("file name(not path) must not exceed 1024 characters");
     puts("keyboard interrupt to kill");
     return 0;
   }
@@ -213,11 +349,13 @@ int main(int argc, char *argv[])
     fprintf(stderr, "needs 2 arguments: file path & port\n");
     return -1;
   }
+
   char *filepath = argv[1];
   int port = atoi(argv[2]);
 
   printf("serving  %s  on port  %d\n"
          "keyboard interrupt to kill\n", filepath, port);
 
-  if (serveFile(filepath, port) < 0) return -1;
+  expandFilePath(filepath);
+  serve(filepath, port);
 }
