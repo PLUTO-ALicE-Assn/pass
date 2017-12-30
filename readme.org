@@ -22,11 +22,9 @@ Open a downloaded or web browser and go to <address:port>.
 
 There is no encryption so don't use this on any secret.
 
-* Used
+* TODO
 
-
+add NAT traversal support.
 
 * P.S.
 https://github.com/kern/filepizza got a fun cartoon.
-
-
