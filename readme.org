@@ -22,7 +22,7 @@ Open a downloaded or web browser and go to <address:port>.
 
 There is no encryption so don't use this on any secret.
 
-* TODO
+* TO-DO
 
 add NAT traversal support.
 
