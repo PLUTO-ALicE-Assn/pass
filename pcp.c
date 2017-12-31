@@ -26,6 +26,7 @@ long int getInternalAddress(char* interface, sa_family_t ipVersion)
   if (getifaddrs(&ifaddrHead) != 0)
   {
     fprintf(stderr, "ifaddrs error");
+    return -1;
   }
 
   /* iterate through address list */
@@ -42,7 +43,7 @@ long int getInternalAddress(char* interface, sa_family_t ipVersion)
 
     freeifaddrs(ifaddrHead);
 
-    return address;
+    return htonl(address);
   }
 
   freeifaddrs(ifaddrHead);
@@ -53,10 +54,10 @@ long int getInternalAddress(char* interface, sa_family_t ipVersion)
 int main()
 {
   /* get port & address */
-  const int port = 8765;
-  long int address = getInternalAddress((char*) &"en0", AF_INET);
+  const int port = 8888;
+  long int internalAddress = getInternalAddress((char*) &"en0", AF_INET);
 
-  if (!address)
+  if (internalAddress <= 0)
   {
     fprintf(stderr, "get internal address error");
     return -1;
@@ -69,22 +70,26 @@ int main()
   struct sockaddr_in sockaddress;
   sockaddress.sin_family = AF_INET;
   sockaddress.sin_port = htons(port); /* host to network short */
-  sockaddress.sin_addr.s_addr = (in_addr_t) address;
+  sockaddress.sin_addr.s_addr = (in_addr_t) internalAddress;
 
   /* start pcp, 3600 is lifetime in seconds */
   pcp_flow_t *flow = pcp_new_flow(pcpCXT, (struct sockaddr*) &sockaddress, NULL, NULL, AF_INET, 3600, NULL);
 
   /* get external address & port */
-  size_t infoCount = 1024;
+  size_t infoCount = 4096;
   pcp_flow_info_t *info = pcp_flow_get_info(flow, &infoCount);
   struct in6_addr externalAddress = info->ext_ip;
   uint16_t externalPort = info->ext_port;
 
-  /* convert numeric to string */
+  /* convert numeric to string, Must be allocated */
   char *externalAddressStr = (char*) malloc(INET6_ADDRSTRLEN);
   inet_ntop(AF_INET6, &externalAddress, externalAddressStr, INET6_ADDRSTRLEN);
 
-  printf("\n++++++++\nTell Yuan what is this: %s\n%d++++++++\n\n", externalAddressStr, externalPort);
+
+  printf("external address: %s\nexternal port: %d\n", externalAddressStr, externalPort);
+
+  char str[1024];
+  gets(str);
 
   free(externalAddressStr);
   free(info);
