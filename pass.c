@@ -17,12 +17,6 @@
 #endif
 
 
-/* TODO: implement ranges
- * TODO: support multi-threading downloads
- * TODO: add error checks
- * TODO: graceful shutdown
- *
- */
 
 #define RIO_BUFSIZE 1024
 #define BUFFER_SIZE 1024
@@ -167,7 +161,6 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   riobuffer_t rioBuffer;
   RIOreadInitBuffer(&rioBuffer, socketFD);
   sscanf(buffer, "%s %s %s", method, url, version);
-  /* TODO check version and method */
 
   request->requireRange = REQUIRE_RANGE_FALSE;
   request->offset = 0;
