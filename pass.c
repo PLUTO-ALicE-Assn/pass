@@ -159,7 +159,16 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
 
   riobuffer_t rioBuffer;
   RIOreadInitBuffer(&rioBuffer, socketFD);
+  RIOreadlineB(&rioBuffer, buffer, MAXLINE);
   sscanf(buffer, "%s %s %s", method, url, version);
+  puts(buffer);
+
+  if (strcmp(method, "GET"))
+  {
+    printf("not GET request\n");
+    close(socketFD);
+    exit(0);
+  }
 
   request->requireRange = REQUIRE_RANGE_FALSE;
   request->offset = 0;
@@ -167,11 +176,12 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   while (buffer[0] != '\n' && buffer[1] != '\n')
   {
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
+    puts(buffer);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
+      printf("request: %s\n", buffer);
       request->requireRange = REQUIRE_RANGE_TRUE;
       sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end);
-      request->end++;
     }
   }
 }
@@ -211,11 +221,12 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
   {
     sprintf(header,
             "HTTP/1.1 206 Partial\r\n"
+            "Accept-Ranges: bytes\r\n"
             "Content-Disposition: attachment; filename=\"%s\"\r\n"
             "Content-Range: bytes %lld-%lld/%lld\r\n"
             "Content-Length: %lld\r\n"
-            "Content-Type: multipart/byteranges\n"
-            "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset);
+            "Content-Type: multipart/byteranges\r\n"
+            "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset + 1);
     printf("offset: %lld\nend: %lld\n", request->offset, request->end);
   }
   puts(header);
@@ -279,7 +290,7 @@ void serveFile(int clientSocketFD, char *filepath)
 
   char header[BUFFER_SIZE];
   composeHeader(header, &request, filepath);
-  write(clientSocketFD, header, strlen(header));
+  RIOwriteN(clientSocketFD, header, strlen(header));
 
   sendFile(filepath, clientSocketFD, &request);
 }
@@ -320,6 +331,7 @@ void serve(char* filepath, int port)
     if (fork() == 0)
     {
       serveFile(clientSocketFD, filepath);
+      close(clientSocketFD);
       exit(0);
     }
     else
