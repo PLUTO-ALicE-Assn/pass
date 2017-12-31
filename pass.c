@@ -132,7 +132,6 @@ void findFilename(char *filepath, char* filename)
       bzero(filename, sizeof(&filename));
       filenamePt = 0;
     }
-    printf("filename: %s\n", filename);
   }
 
   filename[filenamePt + 1] = '\0';
@@ -172,6 +171,7 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
     {
       request->requireRange = REQUIRE_RANGE_TRUE;
       sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end);
+      request->end++;
     }
   }
 }
@@ -203,10 +203,10 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
   {
     sprintf(header,
             "HTTP/1.1 200 OK\r\n"
-            "Content-Length: %lld\r\n"
             "Accept-Ranges: bytes\r\n"
             "Content-Disposition: attachment; filename=\"%s\"\r\n"
-            "\r\n", fileLength, filename);
+            "Content-Length: %lld\r\n"
+            "\r\n", filename, fileLength);
   } else if (request->requireRange == REQUIRE_RANGE_TRUE)
   {
     sprintf(header,
@@ -215,6 +215,7 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
             "Range: bytes=%lld-%lld/%lld\r\n"
             "Content-Length: %lld\r\n"
             "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset);
+    printf("offset: %lld\nend: %lld\n", request->offset, request->end);
   }
   puts(header);
 }
@@ -225,7 +226,7 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   FILE *file = fopen(filepath, "rb");
   if (!file) errorExit("failed to open file");
 
-  if (request->end == 0)
+  if (request->requireRange == REQUIRE_RANGE_FALSE)
     request->end = getFileLength(filepath);
 
   off_t totalSize = request->end - request->offset;
