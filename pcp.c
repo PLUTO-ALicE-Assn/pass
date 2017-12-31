@@ -15,7 +15,7 @@
  *  ipVersion can be AF_INET or AF_INET6
  */
 
-const long int getInternalAddress(char* interface, sa_family_t ipVersion)
+long int getInternalAddress(char* interface, sa_family_t ipVersion)
 {
   struct ifaddrs *ifaddrHead, *ifaddr;
   /* int_8 */
