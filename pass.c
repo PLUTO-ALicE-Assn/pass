@@ -212,7 +212,7 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
     sprintf(header,
             "HTTP/1.1 206 Partial\r\n"
             "Content-Disposition: attachment; filename=\"%s\"\r\n"
-            "Range: bytes=%lld-%lld/%lld\r\n"
+            "Content-Range: bytes=%lld-%lld/%lld\r\n"
             "Content-Length: %lld\r\n"
             "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset);
     printf("offset: %lld\nend: %lld\n", request->offset, request->end);
