@@ -181,7 +181,11 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
     {
       printf("request: %s\n", buffer);
       request->requireRange = REQUIRE_RANGE_TRUE;
-      sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end);
+      if (sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end))
+        {
+          fprintf(stderr, "bad Range request(or not supported):\n%s", buffer);
+          exit(0);
+        }
     }
   }
 }
