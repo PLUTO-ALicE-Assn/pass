@@ -287,7 +287,7 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   int fileNo = fileno(file);
 
   bytesLeftToSend = request->end - offset + 1;
-  while (request->end > offset)
+  while (bytesLeftTosend > 0)
   {
     if (bytesLeftToSend < BUFFER_SIZE) len = bytesLeftToSend;
 
@@ -296,7 +296,7 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
     if (bytesSentInOneAction < 0) errorExit("failed to send file");
 
     offset += bytesSentInOneAction;
-    bytesSentInOneAction -= bytesSentInOneAction;
+    bytesLeftToSend -= bytesSentInOneAction;
   }
 }
 #endif
