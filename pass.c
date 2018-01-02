@@ -73,11 +73,12 @@ ssize_t RIOread(riobuffer_t *rp, char *usrbuf, ssize_t n)
 
 ssize_t RIOreadlineB(riobuffer_t *rp, void *usrbuf, size_t maxlen)
 {
-  int n, readCount;
+  int n;
   char c, *bufferPTR = usrbuf;
 
   for (n = 1; (size_t) n < maxlen; n++)
   {
+    int readCount;
     if ((readCount = RIOread(rp, &c, 1)) == 1)
     {
       *bufferPTR++ = c;
@@ -97,11 +98,11 @@ ssize_t RIOreadlineB(riobuffer_t *rp, void *usrbuf, size_t maxlen)
 ssize_t RIOwriteN(int fd, void *usrbuf, size_t n)
 {
   size_t nleft = n;
-  ssize_t numberWritten;
   char *bufferPTR = usrbuf;
 
   while (nleft > 0)
   {
+    ssize_t numberWritten;
     if ((numberWritten = write(fd, bufferPTR, nleft)) <= 0)
     {
       if (errno == EINTR)  /* interrupted by sig handler return */
@@ -120,10 +121,10 @@ void findFilename(char *filepath, char* filename)
 {
   size_t pt;
   size_t filenamePt = 0;
-  char ch;
 
   for (pt = 0; pt < strlen(filepath); pt++)
   {
+    char ch;
     ch = filepath[pt];
     filename[filenamePt] = ch;
     filenamePt++;
@@ -255,11 +256,11 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   off_t offset = request->offset;
   off_t totalBytesSent = 0;
   off_t len = BUFFER_SIZE;
-  int ret;
 
   /* send file in chunks */
   while (totalBytesSent < totalSize)
   {
+    int ret;
     if ((totalSize - totalBytesSent) < BUFFER_SIZE)
       len = totalSize - totalBytesSent;
 
