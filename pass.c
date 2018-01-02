@@ -161,7 +161,6 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   RIOreadInitBuffer(&rioBuffer, socketFD);
   RIOreadlineB(&rioBuffer, buffer, MAXLINE);
   sscanf(buffer, "%s %s %s", method, url, version);
-  puts(buffer);
 
   if (strcmp(method, "GET"))
   {
@@ -173,19 +172,25 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   request->requireRange = REQUIRE_RANGE_FALSE;
   request->offset = 0;
   request->end = 0;
-  while (buffer[0] != '\n' && buffer[1] != '\n')
+  while (buffer[0] != '\n' && buffer[1] != '\n') /* end of header */
   {
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
-    puts(buffer);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
-      printf("request: %s\n", buffer);
       request->requireRange = REQUIRE_RANGE_TRUE;
-      /* in case of Range like "bytes=-500", "bytes=9500-", "bytes=0-0,-1", etc */
-      if (sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end))
+      if (sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end) <= 0)
         {
-          fprintf(stderr, "bad Range request(or not supported):\n%s", buffer);
-          exit(0);
+          fprintf(stderr, "failed to read Range: %s\n", buffer);
+          request->requireRange = REQUIRE_RANGE_FALSE;
+          continue;
+        }
+      /* bad range request */
+      if (request->offset < 0 || request->end < 0 || request->offset > request->end ||
+          (request->offset == 0 && request->end == 0))
+        /* "Range: bytes=0-" will make both number 0 */
+        {
+          fprintf(stderr, "bad Range request or not supported: %s\n", buffer);
+          request->requireRange = REQUIRE_RANGE_FALSE;
         }
     }
   }
@@ -272,17 +277,26 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   FILE *file = fopen(filepath, "rb");
   if (!file) errorExit("failed to open file");
 
-  off_t bytesLeftToSend = request->end - request->offset;
+  if (request->requireRange == REQUIRE_RANGE_FALSE)
+    request->end = getFileLength(filepath);
+
   off_t offset = request->offset;
+  off_t bytesLeftToSend = 0;
   off_t bytesSentInOneAction = 0;
-  off_t len = BUFFER_SIZE;
-  while (bytesLeftToSend > 0)
+  size_t len = BUFFER_SIZE;
+  int fileNo = fileno(file);
+
+  bytesLeftToSend = request->end - offset + 1;
+  while (request->end > offset)
   {
     if (bytesLeftToSend < BUFFER_SIZE) len = bytesLeftToSend;
-    bytesSentInOneAction = sendfile(clientSocketFD, fileno(file), &offset, len);
+
+    bytesSentInOneAction = sendfile(clientSocketFD, fileNo, &offset, len);
+
     if (bytesSentInOneAction < 0) errorExit("failed to send file");
-    bytesLeftToSend -= bytesSentInOneAction;
+
     offset += bytesSentInOneAction;
+    bytesSentInOneAction -= bytesSentInOneAction;
   }
 }
 #endif
@@ -290,13 +304,11 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
 void serveFile(int clientSocketFD, char *filepath)
 {
   httpRquest request;
-
   readHeaderFromClient(clientSocketFD, &request);
 
   char header[BUFFER_SIZE];
   composeHeader(header, &request, filepath);
   RIOwriteN(clientSocketFD, header, strlen(header));
-
   sendFile(filepath, clientSocketFD, &request);
 }
 
@@ -333,16 +345,20 @@ void serve(char* filepath, int port)
 
     puts("client connected");
 
-    if (fork() == 0)
-    {
-      serveFile(clientSocketFD, filepath);
-      close(clientSocketFD);
-      exit(0);
-    }
-    else
-    {
-      close(clientSocketFD);
-    }
+    /* if (fork() == 0) */
+    /* { */
+    /*   close(socketFD); */
+    /*   serveFile(clientSocketFD, filepath); */
+    /*   /\* close(clientSocketFD); *\/ */
+    /*   /\* exit(0); *\/ */
+    /* } */
+    /* else */
+    /* { */
+    /*   close(clientSocketFD); */
+    /* } */
+    serveFile(clientSocketFD, filepath);
+    sleep(5);
+    close(clientSocketFD);
   }
 }
 
