@@ -6,3 +6,6 @@
 
 !pass.c
 !pcp.c
+!upnp.c
+!libminiupnpc.a
+!main.c

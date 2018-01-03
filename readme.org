@@ -2,16 +2,18 @@
 
 a file transfer tool.
 point to point, no server needed.
+NAT traversal equipped.
 
 * Build
+#+BEGIN_SRC shell
+clang pass.c main.c upnp.c libminiupnpc.a -o pass
+#+END_SRC
 
 * Usage
 
 #+BEGIN_SRC shell
-$ pass <file-path> <port>
-
-serving <file-name> on <address:port>
-keyboard interrupt to kill
+# verbose for verbose mode
+$ pass <file-path> <port> (optional) verbose
 #+END_SRC
 
 File name(not path) cannot exceed 512 characters.
@@ -24,7 +26,8 @@ There is no encryption so don't use this on any secret.
 
 * TO-DO
 
-add NAT traversal support.
+test on public address
 
-* P.S.
-https://github.com/kern/filepizza got a fun cartoon.
+* Library used
+
+miniupnpc[[: https://github.com/miniupnp/miniupnp]]

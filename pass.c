@@ -240,7 +240,6 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
             "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset + 1);
     printf("offset: %lld\nend: %lld\n", request->offset, request->end);
   }
-  puts(header);
 }
 
 #ifdef __APPLE__
@@ -346,45 +345,45 @@ void serve(char* filepath, int port)
 
     puts("client connected");
 
-    /* if (fork() == 0) */
-    /* { */
-    /*   close(socketFD); */
-    /*   serveFile(clientSocketFD, filepath); */
-    /*   /\* close(clientSocketFD); *\/ */
-    /*   /\* exit(0); *\/ */
-    /* } */
-    /* else */
-    /* { */
-    /*   close(clientSocketFD); */
-    /* } */
-    serveFile(clientSocketFD, filepath);
-    sleep(5);
-    close(clientSocketFD);
+    if (fork() == 0)
+    {
+      close(socketFD);
+      puts("send file");
+      serveFile(clientSocketFD, filepath);
+      sleep(5);
+      puts("done");
+      close(clientSocketFD);
+      exit(0);
+    }
+    else
+    {
+      close(clientSocketFD);
+    }
   }
 }
 
-int main(int argc, char *argv[])
-{
-  if (strcmp(argv[1], "-h") == 0)
-  {
-    puts("format: pass <filepath> <port>");
-    puts("file name(not path) must not exceed 1024 characters");
-    puts("keyboard interrupt to kill");
-    return 0;
-  }
+/* int main(int argc, char *argv[]) */
+/* { */
+/*   if (strcmp(argv[1], "-h") == 0) */
+/*   { */
+/*     puts("format: pass <filepath> <port>"); */
+/*     puts("file name(not path) must not exceed 1024 characters"); */
+/*     puts("keyboard interrupt to kill"); */
+/*     return 0; */
+/*   } */
 
-  if (argc < 3 || argc > 3)
-  {
-    fprintf(stderr, "needs 2 arguments: file path & port\n");
-    return -1;
-  }
+/*   if (argc < 3 || argc > 3) */
+/*   { */
+/*     fprintf(stderr, "needs 2 arguments: file path & port\n"); */
+/*     return -1; */
+/*   } */
 
-  char *filepath = argv[1];
-  int port = atoi(argv[2]);
+/*   char *filepath = argv[1]; */
+/*   int port = atoi(argv[2]); */
 
-  printf("serving  %s  on port  %d\n"
-         "keyboard interrupt to kill\n", filepath, port);
+/*   printf("serving  %s  on port  %d\n" */
+/*          "keyboard interrupt to kill\n", filepath, port); */
 
-  expandFilePath(filepath);
-  serve(filepath, port);
-}
+/*   expandFilePath(filepath); */
+/*   serve(filepath, port); */
+/* } */
