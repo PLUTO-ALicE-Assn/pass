@@ -1,8 +1,8 @@
-#include <miniupnpc/miniupnpc.h>
-#include <miniupnpc/upnpcommands.h>
+/* #include <miniupnpc/miniupnpc.h> */
+/* #include <miniupnpc/upnpcommands.h> */
 
-#include "miniupnpc.h"
-#include "upnpcommands.h"
+#include "miniupnpc/miniupnpc.h"
+#include "miniupnpc/upnpcommands.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <netinet/in.h>

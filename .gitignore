@@ -4,10 +4,6 @@
 
 !readme.org
 
-!pass.c
-!pcp.c
-!upnp.c
-!libminiupnpc.a
-!main.c
-!miniupnpc.h
-!upnpcommands.h
+!lib/
+!src/
+!miniupnpc/
