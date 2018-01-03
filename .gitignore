@@ -9,3 +9,5 @@
 !upnp.c
 !libminiupnpc.a
 !main.c
+!miniupnpc.h
+!upnpcommands.h
