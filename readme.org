@@ -31,3 +31,7 @@ test on public address
 * Library used
 
 miniupnpc[[: https://github.com/miniupnp/miniupnp]]
+
+* Note
+
+pcp.c not used because I couldn't get it to work.
