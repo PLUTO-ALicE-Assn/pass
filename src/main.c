@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "upnp.h"
+#include "include/upnp.h"
 
 #define TRUE 1
 #define FALSE 0
