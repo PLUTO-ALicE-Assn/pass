@@ -60,17 +60,12 @@ int main(int argc, char *argv[])
   {
     upnp_flow flow;
 
-    mapInit(&flow);
-
     if (map)
     {
+      mapInit(&flow);
       mapPort(port, &flow);
       /* let user know the external address */
       printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port);
-    }
-    else
-    {
-      printf("download link:\nhttp://%s:%d\n", flow.internalAddress, port);
     }
 
     printf("press enter to exit");

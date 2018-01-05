@@ -69,7 +69,13 @@ void mapInit(upnp_flow *flow)
 
   struct UPNPUrls *urls = &flow->urls;
   struct IGDdatas *data = &flow->data;
-  if (!deviceList) printf("upnpDiscover() error code=%d\n", error);
+  if (!deviceList)
+  {
+    printf("upnpDiscover() error code=%d\n", error);
+    exit(-1);
+  }
+
+
 
   UPNP_GetValidIGD(deviceList, urls, data, flow->internalAddress, sizeof(flow->internalAddress));
 
