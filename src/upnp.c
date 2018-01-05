@@ -1,8 +1,6 @@
 /* #include <miniupnpc/miniupnpc.h> */
 /* #include <miniupnpc/upnpcommands.h> */
 
-#include "miniupnpc/miniupnpc.h"
-#include "miniupnpc/upnpcommands.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <netinet/in.h>
@@ -11,6 +9,9 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "miniupnpc/miniupnpc.h"
+#include "miniupnpc/upnpcommands.h"
+#include "log.h"
 
 #define DELAY_TIME 5000 /* in milliseconds. set it longer because user needs to click allow if there is a firewall */
 #define DEFAULT_TTL 2
@@ -22,52 +23,57 @@ void handleReturnCode (int code)
   switch (code)
   {
   case 0:
-    puts("SUCCESS");
+    log_info("SUCCESS");
     break;
   case 402:
-    puts("Invalid Args - See UPnP Device Architecture section on Control.");
-    break;
+    log_warn("Invalid Args - See UPnP Device Architecture section on Control.");
+    exit(-1);
   case 501:
-    puts("Action Failed - See UPnP Device Architecture section on Control.");
-    break;
+    log_warn("Action Failed - See UPnP Device Architecture section on Control.");
+    exit(-1);
   case 606:
-    puts("Action not authorized - The action requested REQUIRES authorization and the sender was not authorized.");
-    break;
+    log_warn("Action not authorized - The action requested REQUIRES authorization and the sender was not authorized.");
+    exit(-1);
   case 715:
-    puts("WildCardNotPermittedInSrcIP - The source IP address cannot be wild-carded");
-    break;
+    log_warn("WildCardNotPermittedInSrcIP - The source IP address cannot be wild-carded");
+    exit(-1);
   case 716:
-    puts("WildCardNotPermittedInExtPort - The external port cannot be wild-carded ConflictInMappingEntry - The port mapping entry specified conflicts");
-    break;
+    log_warn("WildCardNotPermittedInExtPort - The external port cannot be wild-carded ConflictInMappingEntry - The port mapping entry specified conflicts");
+    exit(-1);
   case 718:
-    puts("ConflictInMappingEntry - The port mapping entry specified conflicts with a mapping assigned previously to another client");
-    break;
+    log_warn("ConflictInMappingEntry - The port mapping entry specified conflicts with a mapping assigned previously to another client");
+    exit(-1);
   case 724:
-    puts("SamePortValuesRequired - Internal and External port values must be the same");
-    break;
+    log_warn("SamePortValuesRequired - Internal and External port values must be the same");
+    exit(-1);
   case 725:
-    puts("OnlyPermanentLeasesSupported - The NAT implementation only supports permanent lease times on port mappings");
-    break;
+    log_warn("OnlyPermanentLeasesSupported - The NAT implementation only supports permanent lease times on port mappings");
+    exit(-1);
   case 726:
-    puts("RemoteHostOnlySupportsWildcard - RemoteHost must be a wildcard and cannot be a specific IP address or DNS name");
-    break;
+    log_warn("RemoteHostOnlySupportsWildcard - RemoteHost must be a wildcard and cannot be a specific IP address or DNS name");
+    exit(-1);
   case 727:
-    puts("ExternalPortOnlySupportsWildcard - ExternalPort must be a wildcard and cannot be a specific port value");
-    break;
+    log_warn("ExternalPortOnlySupportsWildcard - ExternalPort must be a wildcard and cannot be a specific port value");
+    exit(-1);
   case 728:
-    puts("NoPortMapsAvailable - There are not enough free ports available to complete port mapping.");
-    break;
+    log_warn("NoPortMapsAvailable - There are not enough free ports available to complete port mapping.");
+    exit(-1);
   case 729:
-    puts("ConflictWithOtherMechanisms - Attempted port mapping is not allowed due to conflict with other mechanisms.");
-    break;
+    log_warn("ConflictWithOtherMechanisms - Attempted port mapping is not allowed due to conflict with other mechanisms.");
+    exit(-1);
   case 732:
-    puts("WildCardNotPermittedInIntPort - The internal port cannot be wild-carded");
-    break;
+    log_warn("WildCardNotPermittedInIntPort - The internal port cannot be wild-carded");
+    exit(-1);
+  default:
+    log_warn("undefined error");
+    exit(-1);
   }
 
 }
 
 /* externalAddress has to be at least 16 bit */
+/* map a external port to a same internal port */
+ /* and print out external address */
 void mapPort(int port)
 {
   struct UPNPDev * deviceList;
@@ -84,34 +90,29 @@ void mapPort(int port)
   if (!deviceList) printf("upnpDiscover() error code=%d\n", error);
 
   char internalAddress[64];
-  char externalAddress[64];
   UPNP_GetValidIGD(deviceList, &urls, &data, internalAddress, sizeof(internalAddress));
 
-  printf("get external address ");
+  char externalAddress[64];
+  log_info("get external address");
   handleReturnCode(UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalAddress));
 
 
   char portStr[256];
   sprintf(portStr, "%d", port);
 
-  printf("map port ");
+  log_info("map port");
   handleReturnCode(UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portStr, portStr, internalAddress, NULL, PROTOCOL, NULL, "3600"));
 
-  /* if stdout connect to terminal, means in verbose mode */
-  if (isatty(fileno(stdout)) == 1)
+  /* let user know the external address */
   printf("external address:\n%s:%d\n", externalAddress, port);
-  else /* not in verbose mode */
-  {
-    freopen("/dev/tty", "w", stdout);
-    printf("external address:\n%s:%d\n", externalAddress, port);
-    freopen("log", "a+", stdout);
-  }
+  printf("press enter to exit");
 
   char ch[64];
-  gets(ch);
+  scanf("%63s", ch);
 
-  printf("close port ");
+  log_info("closing port ");
   handleReturnCode(UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, portStr, PROTOCOL, NULL));
+  log_info("SUCCESS");
 }
 
 /* int main() */
