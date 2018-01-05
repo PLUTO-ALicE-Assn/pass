@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
       printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port);
     }
 
-    printf("press enter to exit");
+    printf("press enter to exit ");
     getchar();
 
     if (map) removeMapping(&flow);
