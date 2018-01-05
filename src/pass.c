@@ -319,7 +319,7 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   /* instead use offset */
 
   bytesLeftToSend = request->end - offset + 1;
-  while (bytesLeftTosend > 0)
+  while (bytesLeftToSend > 0)
   {
     if (bytesLeftToSend < BUFFER_SIZE) len = bytesLeftToSend;
 
