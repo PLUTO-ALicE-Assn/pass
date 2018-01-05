@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
 
   /* set log file */
   FILE *logFile = fopen("log", "a+");
+  if (logFile == NULL) perror("open log file failed");
   log_set_fp(logFile);
 
   /* get file path and port */
