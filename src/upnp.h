@@ -13,7 +13,7 @@
 #define DELAY_TIME 5000 /* in milliseconds. set it longer because user needs to click allow if there is a firewall */
 #define DEFAULT_TTL 2
 #define PROTOCOL "TCP"
-#define DEFAULT_LEASE "3600"
+#define DEFAULT_LEASE "0" /* permanent */
 
 typedef struct
 {
