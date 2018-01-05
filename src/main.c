@@ -68,6 +68,8 @@ int main(int argc, char *argv[])
       /* let user know the external address */
       printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port);
     }
+    else
+      printf("download link:\nhttp://%s:%d\n", flow.internalAddress, port);
 
     printf("press enter to exit");
     getchar();
