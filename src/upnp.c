@@ -1,5 +1,41 @@
 #include "upnp.h"
 
+long int getInternalAddress(char* interface, sa_family_t ipVersion)
+{
+  struct ifaddrs *ifaddrHead, *ifaddr;
+  /* int_8 */
+  sa_family_t family;
+  int n;
+  char *interfaceName;
+
+  if (getifaddrs(&ifaddrHead) != 0)
+    {
+      fprintf(stderr, "ifaddrs error");
+      return -1;
+    }
+
+  /* iterate through address list */
+  for (ifaddr = ifaddrHead, n = 0; ifaddr != NULL; ifaddr = ifaddr->ifa_next, n++)
+    {
+      family = ifaddr->ifa_addr->sa_family;
+      interfaceName = ifaddr->ifa_name;
+
+      if (!family || family != ipVersion || strcmp(interfaceName, interface) != 0) continue;
+
+      struct sockaddr *addr = ifaddr->ifa_addr;
+      struct sockaddr_in* addr_in = (struct sockaddr_in*) addr;
+      long int address = addr_in->sin_addr.s_addr;
+
+      freeifaddrs(ifaddrHead);
+
+      return htonl(address);
+    }
+
+  freeifaddrs(ifaddrHead);
+
+  return 0;
+}
+
 void handleReturnCode (int code)
 {
   switch (code)

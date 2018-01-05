@@ -26,3 +26,4 @@ typedef struct
 void mapInit(upnp_flow *flow);
 void mapPort(int port, upnp_flow *flow);
 void removeMapping(upnp_flow *flow);
+long int getInternalAddress(char* interface, sa_family_t ipVersion);
