@@ -1,4 +1,4 @@
-#include "upnp.h"
+#include "miniupnpc/upnp.h"
 
 void handleReturnCode (int code)
 {
