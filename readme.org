@@ -28,7 +28,7 @@ There is no encryption so don't use this on any secret.
 
 * TO-DO
 
-More testing
+More test
 
 * Library used
 
