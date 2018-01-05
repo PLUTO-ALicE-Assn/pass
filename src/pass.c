@@ -7,11 +7,9 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h> /* for close() */
-
 #ifdef __linux__
 #include <sys/sendfile.h>
 #endif
-
 #ifdef __APPLE__
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -28,7 +26,6 @@
 #define REQUIRE_RANGE_TRUE 1
 #define  REQUIRE_RANGE_FALSE 0
 
-/* describing a robust-i/o buffer */
 typedef struct
 {
   int RIOfd;                 /* descriptor for this buf */
@@ -37,14 +34,12 @@ typedef struct
   char RIObuffer[RIO_BUFSIZE];  /* internal buffer */
 } riobuffer_t;
 
-/* describing a request for a file */
 typedef struct {
   off_t offset;              /* for support Range */
   off_t end;
   int requireRange;
 } httpRquest;
 
-/* initialize a robst-i/o buffer */
 void RIOreadInitBuffer(riobuffer_t *rp, int fd)
 {
   rp->RIOfd = fd;
@@ -52,7 +47,6 @@ void RIOreadInitBuffer(riobuffer_t *rp, int fd)
   rp->RIObufferPTR = rp->RIObuffer;
 }
 
-/* identical to read() */
 ssize_t RIOread(riobuffer_t *rp, char *usrbuf, ssize_t n)
 {
   int rest;
@@ -77,7 +71,6 @@ ssize_t RIOread(riobuffer_t *rp, char *usrbuf, ssize_t n)
   return rest;
 }
 
-/* read a line into buffer */
 ssize_t RIOreadlineB(riobuffer_t *rp, void *usrbuf, size_t maxlen)
 {
   int n;
@@ -102,7 +95,6 @@ ssize_t RIOreadlineB(riobuffer_t *rp, void *usrbuf, size_t maxlen)
   return n;
 }
 
-/* numbered wirte() */
 ssize_t RIOwriteN(int fd, void *usrbuf, size_t n)
 {
   size_t nleft = n;
@@ -146,15 +138,12 @@ void findFilename(char *filepath, char* filename)
   filename[filenamePt + 1] = '\0';
 }
 
-/* print error message and exit */
 void errorExit(char* text)
 {
   perror(text);
-  exit(-1);
+  exit(0);
 }
 
-/* replace ~ in path with actual path */
-/* also replace shell variables */
 void expandFilePath(char* filepath)
 {
   wordexp_t wordExpand;
@@ -169,13 +158,11 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
 {
   char buffer[MAXLINE], method[MAXLINE], url[MAXLINE], version[MAXLINE];
 
-  /* read the first line */
   riobuffer_t rioBuffer;
   RIOreadInitBuffer(&rioBuffer, socketFD);
   RIOreadlineB(&rioBuffer, buffer, MAXLINE);
   sscanf(buffer, "%s %s %s", method, url, version);
 
-  /* if not GET close connection */
   if (strcmp(method, "GET"))
   {
     printf("not GET request\n");
@@ -183,7 +170,6 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
     exit(0);
   }
 
-  /* read lines and look for Range */
   request->requireRange = REQUIRE_RANGE_FALSE;
   request->offset = 0;
   request->end = 0;
@@ -192,16 +178,14 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
-      /* have range! */
       request->requireRange = REQUIRE_RANGE_TRUE;
-      /* if cannot retrieve information from line */
       if (sscanf(buffer, "Range: bytes=%lld-%lld", &request->offset, &request->end) <= 0)
         {
           fprintf(stderr, "failed to read Range: %s\n", buffer);
           request->requireRange = REQUIRE_RANGE_FALSE;
           continue;
         }
-      /* if bad range request */
+      /* bad range request */
       if (request->offset < 0 || request->end < 0 || request->offset > request->end ||
           (request->offset == 0 && request->end == 0))
         /* "Range: bytes=0-" will make both number 0 */
@@ -219,7 +203,6 @@ off_t getFileLength(char *filepath)
   off_t fileLength;
   struct stat statBuffer;
 
-  /* if not successfully read stat of file or file is not a regular file */
   if (stat(filepath, &statBuffer) != 0 || (!S_ISREG(statBuffer.st_mode)))
     errorExit("checking status of file failed, is it a regular file?");
 
@@ -227,19 +210,16 @@ off_t getFileLength(char *filepath)
   return fileLength;
 }
 
-/* compose the header to be sent back to client */
 void composeHeader(char *header, httpRquest *request, char *filepath)
 {
   /* file name have to be shorter than MAX_FILENAME(1024) characters*/
   char filename[MAX_FILENAME];
   findFilename(filepath, filename);
 
-  /* get file length */
   off_t fileLength;
   fileLength = getFileLength(filepath);
   if (fileLength < 0) errorExit("getting file length failed");
 
-  /* if client want the whole file */
   if (request->requireRange == REQUIRE_RANGE_FALSE)
   {
     sprintf(header,
@@ -248,9 +228,7 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
             "Content-Disposition: attachment; filename=\"%s\"\r\n"
             "Content-Length: %lld\r\n"
             "\r\n", filename, fileLength);
-  }
-  /* if client want some part of the file */
-  else if (request->requireRange == REQUIRE_RANGE_TRUE)
+  } else if (request->requireRange == REQUIRE_RANGE_TRUE)
   {
     sprintf(header,
             "HTTP/1.1 206 Partial\r\n"
@@ -265,33 +243,28 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
 }
 
 #ifdef __APPLE__
-/* send file and garantee every bytes are sent */
 void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
 {
-  /* open file */
   FILE *file = fopen(filepath, "rb");
   if (!file) errorExit("failed to open file");
 
-  /* if client want whole file, end will be 0 */
-  /* then set end to the last byte of file */
   if (request->requireRange == REQUIRE_RANGE_FALSE)
     request->end = getFileLength(filepath);
 
   off_t totalSize = request->end - request->offset;
-  off_t offset = request->offset; /* where to start to send in every cycle*/
+  off_t offset = request->offset;
   off_t totalBytesSent = 0;
-  off_t len = BUFFER_SIZE; /* chunk size */
+  off_t len = BUFFER_SIZE;
 
   /* send file in chunks */
   while (totalBytesSent < totalSize)
   {
-    int ret; /* return code */
+    int ret;
     if ((totalSize - totalBytesSent) < BUFFER_SIZE)
       len = totalSize - totalBytesSent;
 
     ret = sendfile(fileno(file), clientSocketFD, offset, &len, NULL, 0);
     if (ret < 0) errorExit("failed to send file");
-    /* len is changed to how many bytes are sent */
     totalBytesSent += len;
     offset += len;
   }
@@ -299,15 +272,11 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
 #endif
 
 #ifdef __linux__
-/* send file and garantee every bytes are sent */
 void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
 {
-  /* open file */
   FILE *file = fopen(filepath, "rb");
   if (!file) errorExit("failed to open file");
 
-  /* if client want whole file, end will be 0 */
-  /* then set end to the last byte of file */
   if (request->requireRange == REQUIRE_RANGE_FALSE)
     request->end = getFileLength(filepath);
 
@@ -316,9 +285,6 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   off_t bytesSentInOneAction = 0;
   size_t len = BUFFER_SIZE;
   int fileNo = fileno(file);
-
-  /* do not use request->offset from this point!!! */
-  /* instead use offset */
 
   bytesLeftToSend = request->end - offset + 1;
   while (bytesLeftTosend > 0)
@@ -335,7 +301,6 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
 }
 #endif
 
-/* read header from client and send response header and file */
 void serveFile(int clientSocketFD, char *filepath)
 {
   httpRquest request;
@@ -347,7 +312,6 @@ void serveFile(int clientSocketFD, char *filepath)
   sendFile(filepath, clientSocketFD, &request);
 }
 
-/* set up the connection and start listening on socket */
 void initListening(int socketFD, struct sockaddr_in *address, int port)
 {
   /* create socket */
@@ -367,7 +331,6 @@ void initListening(int socketFD, struct sockaddr_in *address, int port)
   if (listen(socketFD, 16)!=0) errorExit("listening failed");
 }
 
-/* serve a file over port */
 void serve(char* filepath, int port)
 {
   int socketFD = socket(PF_INET, SOCK_STREAM, 0);
