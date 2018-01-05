@@ -1,4 +1,4 @@
-#include "include/upnp.h"
+#include "upnp.h"
 
 void handleReturnCode (int code)
 {
