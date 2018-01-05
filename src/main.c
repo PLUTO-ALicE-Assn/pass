@@ -7,6 +7,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define TRUE 1
+#define FALSE 0
+
 void mapPort(int port);
 void serve(char* filepath, int port);
 void expandFilePath(char* filepath);
@@ -24,11 +27,21 @@ int main(int argc, char *argv[])
     }
 
   /* if wrong number of arguments are entered */
-  if (argc < 3 || argc > 3)
+  if (argc < 3 || argc > 4)
     {
       fprintf(stderr, "needs 2/3 arguments: file path & port\n");
       return -1;
     }
+
+  int map = FALSE;
+
+  if (argc == 4)
+  {
+    if (strcmp(argv[3], "map") == 0)
+    {
+      int map = TRUE;
+    }
+  }
 
 
   /* get file path and port */
@@ -44,7 +57,11 @@ int main(int argc, char *argv[])
   }
   else
   {
-    mapPort(port);
+    if (map) mapPort(port);
+
+    printf("press enter to exit");
+    getchar();
+
     kill(pid, SIGTERM);
   }
 }

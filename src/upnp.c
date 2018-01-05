@@ -100,10 +100,7 @@ void mapPort(int port)
   handleReturnCode(UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portStr, portStr, internalAddress, NULL, PROTOCOL, NULL, "3600"));
 
   /* let user know the external address */
-  printf("external address:\n%s:%d\n", externalAddress, port);
-
-  printf("press enter to exit");
-  getchar();
+  printf("download link:\nhttp://%s:%d\n", externalAddress, port);
 
   handleReturnCode(UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, portStr, PROTOCOL, NULL));
 }
