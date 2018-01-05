@@ -7,8 +7,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "log.h"
-
 void mapPort(int port);
 void serve(char* filepath, int port);
 void expandFilePath(char* filepath);
@@ -32,10 +30,6 @@ int main(int argc, char *argv[])
       return -1;
     }
 
-  /* set log file */
-  FILE *logFile = fopen("log", "a+");
-  if (logFile == NULL) perror("open log file failed");
-  log_set_fp(logFile);
 
   /* get file path and port */
   char *filepath = argv[1];
@@ -45,16 +39,12 @@ int main(int argc, char *argv[])
   pid_t pid;
   if ((pid = fork()) == 0)
   {
-    log_info("expand file path");
     expandFilePath(filepath);
-    log_info("serve file");
     serve(filepath, port);
   }
   else
   {
-    log_info("maping port");
     mapPort(port);
-    log_info("exiting");
     kill(pid, SIGTERM);
   }
 }

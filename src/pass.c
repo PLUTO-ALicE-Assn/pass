@@ -18,9 +18,6 @@
 #include <sys/types.h>
 #endif
 
-#include "log.h"
-
-
 #define RIO_BUFSIZE 1024
 #define BUFFER_SIZE 1024
 #define MAXLINE 1024
@@ -381,14 +378,11 @@ void serve(char* filepath, int port)
     socklen_t size = sizeof(address);
     int clientSocketFD = accept(socketFD, (struct sockaddr*) &address, &size);
 
-    log_info("client connected");
 
     if (fork() == 0)
     {
       close(socketFD);
-      log_info("sending file");
       serveFile(clientSocketFD, filepath);
-      log_info("file sent");
       sleep(3);
       close(clientSocketFD);
       exit(0);
