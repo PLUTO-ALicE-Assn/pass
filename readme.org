@@ -7,6 +7,8 @@ NAT traversal equipped.
 * Build
 #+BEGIN_SRC shell
 make
+# copy to /usr/local/bin
+make install
 #+END_SRC
 
 * Usage
@@ -26,7 +28,7 @@ There is no encryption so don't use this on any secret.
 
 * TO-DO
 
-test on public address
+More testing
 
 * Library used
 
