@@ -7,10 +7,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "upnp.h"
+
 #define TRUE 1
 #define FALSE 0
 
-void mapPort(int port);
 void serve(char* filepath, int port);
 void expandFilePath(char* filepath);
 
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
   {
     if (strcmp(argv[3], "map") == 0)
     {
-      int map = TRUE;
+      map = TRUE;
     }
   }
 
@@ -57,10 +58,21 @@ int main(int argc, char *argv[])
   }
   else
   {
-    if (map) mapPort(port);
+    upnp_flow flow;
+
+    if (map)
+    {
+
+      mapInit(&flow);
+      mapPort(port, &flow);
+      /* let user know the external address */
+      printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port);
+    }
 
     printf("press enter to exit");
     getchar();
+
+    if (map) removeMapping(&flow);
 
     kill(pid, SIGTERM);
   }

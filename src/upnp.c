@@ -1,21 +1,4 @@
-/* #include <miniupnpc/miniupnpc.h> */
-/* #include <miniupnpc/upnpcommands.h> */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <ifaddrs.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-
-#include "miniupnpc/miniupnpc.h"
-#include "miniupnpc/upnpcommands.h"
-
-#define DELAY_TIME 5000 /* in milliseconds. set it longer because user needs to click allow if there is a firewall */
-#define DEFAULT_TTL 2
-#define PROTOCOL "TCP"
-#define DEFAULT_LEASE "3600"
+#include "upnp.h"
 
 void handleReturnCode (int code)
 {
@@ -66,13 +49,13 @@ void handleReturnCode (int code)
     puts("undefined error");
     exit(-1);
   }
-
 }
+
 
 /* externalAddress has to be at least 16 bit */
 /* map a external port to a same internal port */
  /* and print out external address */
-void mapPort(int port)
+void mapInit(upnp_flow *flow)
 {
   struct UPNPDev * deviceList;
   const char * multicastInterface = NULL;
@@ -83,30 +66,49 @@ void mapPort(int port)
   deviceList = upnpDiscover(DELAY_TIME, multicastInterface, mini_ssdpd_socket_fd,
                          0/*sameport*/, ipv6, DEFAULT_TTL, &error);
 
-  struct UPNPUrls urls;
-  struct IGDdatas data;
+  struct UPNPUrls *urls = &flow->urls;
+  struct IGDdatas *data = &flow->data;
   if (!deviceList) printf("upnpDiscover() error code=%d\n", error);
 
-  char internalAddress[64];
-  UPNP_GetValidIGD(deviceList, &urls, &data, internalAddress, sizeof(internalAddress));
+  UPNP_GetValidIGD(deviceList, urls, data, flow->internalAddress, sizeof(flow->internalAddress));
 
-  char externalAddress[64];
-  handleReturnCode(UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalAddress));
+  char *externalAddress = flow->externalAddress;
+  handleReturnCode(UPNP_GetExternalIPAddress(urls->controlURL, data->first.servicetype, externalAddress));
+
+  }
 
 
-  char portStr[256];
+void mapPort(int port, upnp_flow *flow)
+{
+  char *portStr = flow->port;
   sprintf(portStr, "%d", port);
 
-  handleReturnCode(UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, portStr, portStr, internalAddress, NULL, PROTOCOL, NULL, "3600"));
+  struct UPNPUrls *urls = &flow->urls;
+  struct IGDdatas *data = &flow->data;
 
-  /* let user know the external address */
-  printf("download link:\nhttp://%s:%d\n", externalAddress, port);
+  char *internalAddress = flow->internalAddress;
+  handleReturnCode(UPNP_AddPortMapping(urls->controlURL, data->first.servicetype, portStr, portStr, internalAddress, NULL, PROTOCOL, NULL, "3600"));
+}
 
-  handleReturnCode(UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, portStr, PROTOCOL, NULL));
+void removeMapping(upnp_flow *flow)
+{
+    struct UPNPUrls *urls = &flow->urls;
+    struct IGDdatas *data = &flow->data;
+    char *portStr = flow->port;
+
+    handleReturnCode(UPNP_DeletePortMapping(urls->controlURL, data->first.servicetype, portStr, PROTOCOL, NULL));
 }
 
 /* int main() */
 /* { */
-/*   mapPort(10086); */
+/*   int port = 9090; */
+/*   upnp_flow flow; */
+/*   mapInit(&flow); */
+/*   mapPort(port, &flow); */
+/*   /\* let user know the external address *\/ */
+/*   printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port); */
+
+/*   printf("press enter to exit"); */
+/*   getchar(); */
 /*   return 0; */
 /* } */

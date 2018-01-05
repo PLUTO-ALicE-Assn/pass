@@ -6,14 +6,14 @@ NAT traversal equipped.
 
 * Build
 #+BEGIN_SRC shell
-clang pass.c main.c upnp.c libminiupnpc.a -o pass
+make
 #+END_SRC
 
 * Usage
 
 #+BEGIN_SRC shell
-# verbose for verbose mode
-$ pass <file-path> <port> (optional) verbose
+# map for port mapping if you don't have public ip address
+$ pass <file-path> <port> (optional) map
 #+END_SRC
 
 File name(not path) cannot exceed 512 characters.
@@ -34,4 +34,4 @@ miniupnpc[[: https://github.com/miniupnp/miniupnp]]
 
 * Note
 
-pcp.c not used because I couldn't get it to work.
+pcp.c & natpmp.c not used because I couldn't get them to work.

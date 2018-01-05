@@ -1,9 +1,1 @@
-*
-
-!.gitignore
-
-!readme.org
-
-!lib/
-!src/
-!miniupnpc/
+test/
