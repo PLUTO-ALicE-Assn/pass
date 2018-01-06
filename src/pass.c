@@ -176,7 +176,7 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   request->end = 0;
   while (buffer[0] != '\n' && buffer[1] != '\n') /* end of header */
   {
-    puts(buffer);
+    /* puts(buffer); */
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
@@ -336,17 +336,12 @@ void serveFile(int clientSocketFD, char *filepath)
 }
 
 /* set up the connection and start listening on socket */
-void initListening(int socketFD, struct sockaddr_in *address, int port)
+void initListening(int socketFD, struct sockaddr_in6 *address, int port)
 {
-  /* create socket */
-  if (socketFD < 0)
-    errorExit("creating socket failed");
-
   /* configure socket */
-
-  address->sin_family = AF_INET;
-  address->sin_port = htons(port); /* host to network short */
-  address->sin_addr.s_addr = INADDR_ANY;
+  address->sin6_family = AF_INET6;
+  address->sin6_port = htons(port); /* host to network short */
+  address->sin6_addr = in6addr_any;
 
   /* bind & listen */
   if(bind(socketFD, (struct sockaddr*) address, sizeof(*address)) != 0)
@@ -358,8 +353,12 @@ void initListening(int socketFD, struct sockaddr_in *address, int port)
 /* serve a file over port */
 void serve(char* filepath, int port)
 {
-  int socketFD = socket(PF_INET, SOCK_STREAM, 0);
-  struct sockaddr_in address;
+  int socketFD;
+  struct sockaddr_in6 address;
+
+  if ((socketFD = socket(PF_INET6, SOCK_STREAM, 0)) < 0)
+    errorExit("open socket failed");
+
   initListening(socketFD, &address, port);
 
   /* accept client */
@@ -371,12 +370,12 @@ void serve(char* filepath, int port)
 
     if (fork() == 0)
     {
-      puts("fork");
+      /* puts("fork"); */
       close(socketFD);
       serveFile(clientSocketFD, filepath);
       sleep(3);
       close(clientSocketFD);
-      puts("end");
+      /* puts("end"); */
       exit(0);
     }
     else
