@@ -18,6 +18,14 @@ void expandFilePath(char* filepath);
 
 int main(int argc, char *argv[])
 {
+
+  /* if wrong number of arguments are entered */
+  if (argc < 3 || argc > 4)
+    {
+      fprintf(stderr, "needs 2/3 arguments: file path & port\n");
+      return -1;
+    }
+
   /* display help message */
   if (strcmp(argv[1], "-h") == 0)
     {
@@ -25,13 +33,6 @@ int main(int argc, char *argv[])
       puts("file name(not path) must not exceed 1024 characters");
       puts("keyboard interrupt to kill");
       return 0;
-    }
-
-  /* if wrong number of arguments are entered */
-  if (argc < 3 || argc > 4)
-    {
-      fprintf(stderr, "needs 2/3 arguments: file path & port\n");
-      return -1;
     }
 
   int map = FALSE;
