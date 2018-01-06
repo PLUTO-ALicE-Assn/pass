@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
   pid_t pid;
   if ((pid = fork()) == 0)
   {
-    expandFilePath(filepath);
     serve(filepath, port);
   }
   else

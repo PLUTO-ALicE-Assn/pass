@@ -3,6 +3,7 @@
 OS = $(shell uname -s)
 
 libfile=lib/libminiupnpc.a
+
 ifeq ($(OS), Darwin)
 libfile=lib/mac-libminiupnpc.a
 endif

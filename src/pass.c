@@ -151,17 +151,6 @@ void errorExit(char* text)
   exit(-1);
 }
 
-/* replace ~ in path with actual path */
-/* also replace shell variables */
-void expandFilePath(char* filepath)
-{
-  wordexp_t wordExpand;
-
-  if (wordexp(filepath, &wordExpand, 0) != 0)
-    errorExit("expanding file path failed");
-  filepath = wordExpand.we_wordv[0];
-}
-
 
 void readHeaderFromClient(int socketFD, httpRquest *request)
 {
