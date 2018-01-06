@@ -247,6 +247,7 @@ void composeHeader(char *header, httpRquest *request, char *filepath)
             "Content-Length: %lld\r\n"
             "Content-Type: multipart/byteranges\r\n"
             "\r\n", filename, request->offset, request->end, fileLength, request->end - request->offset + 1);
+    /* printf("offset: %lld\nend: %lld\n", request->offset, request->end); */
   }
 }
 
@@ -369,6 +370,7 @@ void serve(char* filepath, int port)
 
     if (fork() == 0)
     {
+      puts("new fork");
       close(socketFD);
       serveFile(clientSocketFD, filepath);
       sleep(3);
