@@ -22,6 +22,14 @@ File name(not path) cannot exceed 512 characters.
 
 Open a downloaded or web browser and go to <address:port>.
 
+* About port mapping
+
+Currently pass can lmap port on only home NAT,
+traversing Large-scale-NAT requires PCP protocol support.
+
+pass will try to ise ipv6 be default,
+so if you have ipv6 address don't map address.
+
 * Safety
 
 There is no encryption so don't use this on any secret.
