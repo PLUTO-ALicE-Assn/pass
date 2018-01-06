@@ -176,7 +176,7 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   request->end = 0;
   while (buffer[0] != '\n' && buffer[1] != '\n') /* end of header */
   {
-    /* puts(buffer); */
+    printf("%s", buffer);
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
@@ -265,12 +265,13 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
   if (request->requireRange == REQUIRE_RANGE_FALSE)
     request->end = getFileLength(filepath);
 
-  off_t totalSize = request->end - request->offset;
+  off_t totalSize = request->end - request->offset + 1;
   off_t offset = request->offset; /* where to start to send in every cycle*/
   off_t totalBytesSent = 0;
   off_t len = BUFFER_SIZE; /* chunk size */
 
   /* send file in chunks */
+  /* printf("totalBytesSent: %lld\n", totalBytesSent); */
   while (totalBytesSent < totalSize)
   {
     int ret; /* return code */
@@ -300,7 +301,7 @@ void sendFile(char *filepath, int clientSocketFD, httpRquest *request)
     request->end = getFileLength(filepath);
 
   off_t offset = request->offset;
-  off_t bytesLeftToSend = 0;
+  off_t bytesLeftToSend;
   off_t bytesSentInOneAction = 0;
   size_t len = BUFFER_SIZE;
   int fileNo = fileno(file);
@@ -371,8 +372,11 @@ void serve(char* filepath, int port)
     if (fork() == 0)
     {
       /* puts("fork"); */
+      shutdown(socketFD, SHUT_RDWR);
       close(socketFD);
+
       serveFile(clientSocketFD, filepath);
+      shutdown(clientSocketFD, SHUT_RDWR);
       sleep(3);
       close(clientSocketFD);
       /* puts("end"); */
