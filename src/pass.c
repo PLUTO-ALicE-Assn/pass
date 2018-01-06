@@ -370,7 +370,7 @@ void serve(char* filepath, int port)
 
     if (fork() == 0)
     {
-      close(socketFD);
+      /* close(socketFD); */
       serveFile(clientSocketFD, filepath);
       sleep(3);
       close(clientSocketFD);
