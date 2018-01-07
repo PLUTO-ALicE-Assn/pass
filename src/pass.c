@@ -176,7 +176,7 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   request->end = 0;
   while (buffer[0] != '\n' && buffer[1] != '\n') /* end of header */
   {
-    printf("%s", buffer);
+    /* printf("%s", buffer); */
     RIOreadlineB(&rioBuffer, buffer, MAXLINE);
     if (buffer[0] == 'R' && buffer[1] == 'a' && buffer[2] == 'n') /* find "Range" field */
     {
