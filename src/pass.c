@@ -166,7 +166,7 @@ void readHeaderFromClient(int socketFD, httpRquest *request)
   /* if not GET close connection */
   if (strcmp(method, "GET"))
   {
-    printf("not GET request\n");
+    printf("not GET request:\n%s\n", buffer);
     close(socketFD);
     exit(0);
   }
