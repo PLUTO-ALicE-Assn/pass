@@ -6,8 +6,11 @@ NAT traversal equipped.
 
 * Build
 #+BEGIN_SRC shell
+git clone https://github.com/PLUTO-ALicE-Assn/pass.git -b stable
+cd pass
 make
 # copy to /usr/local/bin
+# use sudo on linux
 make install
 #+END_SRC
 

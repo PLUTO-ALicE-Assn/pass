@@ -128,10 +128,11 @@ void findFilename(char *filepath, char* filename)
   size_t pt;
   size_t filenamePt = 0;
 
-  for (pt = 0; pt < strlen(filepath); pt++)
+  for (pt = 0; pt <= strlen(filepath); pt++)
   {
     char ch;
     ch = filepath[pt];
+    /* puts(&ch); */
     filename[filenamePt] = ch;
     filenamePt++;
     if(ch == '/')
