@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h> /* for close() */
+#include <arpa/inet.h>
 
 #ifdef __linux__
 #include <sys/sendfile.h>
@@ -337,37 +338,85 @@ void serveFile(int clientSocketFD, char *filepath)
   sendFile(filepath, clientSocketFD, &request);
 }
 
-/* set up the connection and start listening on socket */
-void initListening(int socketFD, struct sockaddr_in6 *address, int port)
+void printAddressInfo(struct addrinfo *addrinfo)
 {
-  /* configure socket */
-  address->sin6_family = AF_INET6;
-  address->sin6_port = htons(port); /* host to network short */
-  address->sin6_addr = in6addr_any;
+  void *addr;
+  char *ipVersion;
+  char ipstr[INET6_ADDRSTRLEN];
 
-  /* bind & listen */
-  if(bind(socketFD, (struct sockaddr*) address, sizeof(*address)) != 0)
-    errorExit("binding failed");
+  if (addrinfo->ai_family == AF_INET) { // IPv4
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)addrinfo->ai_addr;
+    addr = &(ipv4->sin_addr);
+    ipVersion = "IPv4";
+  }
+  else { // IPv6
+    struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)addrinfo->ai_addr;
+    addr = &(ipv6->sin6_addr);
+    ipVersion = "IPv6";
+  }
 
-  if (listen(socketFD, 16)!=0) errorExit("listening failed");
+  // convert the IP to a string and print it:
+  inet_ntop(addrinfo->ai_family, addr, ipstr, sizeof ipstr);
+  printf("  %s: %s\n", ipVersion, ipstr);
+
 }
 
 /* serve a file over port */
 void serve(char* filepath, int port)
 {
-  int socketFD;
-  struct sockaddr_in6 address;
+  struct addrinfo hints;
+  struct addrinfo *result;  // will point to the results
+  struct addrinfo *pt;
+  int sockfd;
+  int yes = 1;
 
-  if ((socketFD = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
-    errorExit("open socket failed");
+  memset(&hints, 0, sizeof hints); // make sure the struct is empty
+  hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
+  hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
+  hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-  initListening(socketFD, &address, port);
+  char portStr[16];
+  sprintf(portStr, "%d", port);
+
+  if (getaddrinfo(NULL, portStr, &hints, &result) != 0)
+  {
+    perror("get address information error");
+    exit(-1);
+  }
+
+  /* try every result from getaddrinfo() in the list until succeed */
+  for(pt = result; pt != NULL; pt = pt->ai_next)
+  {
+    if ((sockfd = socket(pt->ai_family, pt->ai_socktype,
+                         pt->ai_protocol)) == -1)
+      continue;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+                   sizeof(int)) == -1)
+      errorExit("setsockopt");
+
+    if (bind(sockfd, pt->ai_addr, pt->ai_addrlen) == -1)
+    {
+      close(sockfd);
+      continue;
+    }
+    break;
+  }
+
+  if (pt == NULL)
+    errorExit("failed to bind");
+
+  freeaddrinfo(result); // free the linked-list
+
+  struct sockaddr_storage clientAddress;
+
+  if (listen(sockfd, 16)!=0) errorExit("listening failed");
 
   /* accept client */
   for (;;)
   {
-    socklen_t size = sizeof(address);
-    int clientSocketFD = accept(socketFD, NULL, NULL);
+    socklen_t size = sizeof(clientAddress);
+    int clientSocketFD = accept(sockfd, (struct sockaddr*) &clientAddress, &size);
     if ( clientSocketFD < 0)
     {
       perror("failed to accept connection\n");
@@ -377,8 +426,8 @@ void serve(char* filepath, int port)
     if (fork() == 0)
     {
       /* puts("fork"); */
-      shutdown(socketFD, SHUT_RDWR);
-      close(socketFD);
+      shutdown(sockfd, SHUT_RDWR);
+      close(sockfd);
 
       serveFile(clientSocketFD, filepath);
       shutdown(clientSocketFD, SHUT_RDWR);
