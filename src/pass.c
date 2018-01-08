@@ -431,10 +431,6 @@ void serve(char* filepath, int port)
 
     if (fork() == 0)
     {
-      /* puts("fork"); */
-      shutdown(sockfd, SHUT_RDWR);
-      close(sockfd);
-
       serveFile(clientSocketFD, filepath);
       shutdown(clientSocketFD, SHUT_RDWR);
       sleep(3);
