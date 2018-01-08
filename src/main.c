@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include "upnp.h"
 
@@ -43,7 +46,8 @@ long int getInternalAddress(char* interface, sa_family_t ipVersion)
 
       freeifaddrs(ifaddrHead);
 
-      return htonl(address);
+      return address;
+      /* return htonl(address); */
     }
 
   freeifaddrs(ifaddrHead);
@@ -106,16 +110,16 @@ int main(int argc, char *argv[])
     else /* not map port */
     {
       long int address;
-      if ((address = getInternalAddress("en0", AF_INET6)) < 0)
-        {
           if ((address = getInternalAddress("en0", AF_INET)) < 0)
             fprintf(stderr, "can't get internal address");
-        }
 
-      char *addressStr = (char*) malloc(INET6_ADDRSTRLEN);
-      inet_ntop(AF_INET6, &address, addressStr, INET6_ADDRSTRLEN);
+          struct in_addr addr;
+          addr.s_addr = address;
 
-      printf("download link:\nhttp://[%s]:%d\n", addressStr, port);
+      char *addressStr = (char*) malloc(INET_ADDRSTRLEN);
+      inet_ntop(AF_INET, &addr, addressStr, INET_ADDRSTRLEN);
+
+      printf("download link:\nhttp://%s:%d\n", addressStr, port);
     }
 
     printf("press enter to exit\n");

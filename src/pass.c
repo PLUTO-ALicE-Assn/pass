@@ -368,7 +368,11 @@ void serve(char* filepath, int port)
   {
     socklen_t size = sizeof(address);
     int clientSocketFD = accept(socketFD, (struct sockaddr*) &address, &size);
-
+    if ( clientSocketFD < 0)
+    {
+      fprintf(stderr, "failed to accept connection");
+      continue;
+    }
 
     if (fork() == 0)
     {
