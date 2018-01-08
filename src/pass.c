@@ -361,13 +361,12 @@ void printAddressInfo(struct addrinfo *addrinfo)
 
 }
 
-/* serve a file over port */
-void serve(char* filepath, int port)
+int initListen(int port)
 {
+  int sockfd;
   struct addrinfo hints;
   struct addrinfo *result;  // will point to the results
   struct addrinfo *pt;
-  int sockfd;
   int yes = 1;
 
   memset(&hints, 0, sizeof hints); // make sure the struct is empty
@@ -408,13 +407,20 @@ void serve(char* filepath, int port)
 
   freeaddrinfo(result); // free the linked-list
 
-  struct sockaddr_storage clientAddress;
 
-  if (listen(sockfd, 16)!=0) errorExit("listening failed");
+  if (listen(sockfd, 16) == -1) errorExit("listening failed");
+
+  return sockfd;
+}
+/* serve a file over port */
+void serve(char* filepath, int port)
+{
+  int sockfd = initListen(port);
 
   /* accept client */
   for (;;)
   {
+    struct sockaddr_storage clientAddress;
     socklen_t size = sizeof(clientAddress);
     int clientSocketFD = accept(sockfd, (struct sockaddr*) &clientAddress, &size);
     if ( clientSocketFD < 0)
