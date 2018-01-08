@@ -15,6 +15,42 @@
 void serve(char* filepath, int port);
 void expandFilePath(char* filepath);
 
+long int getInternalAddress(char* interface, sa_family_t ipVersion)
+{
+  struct ifaddrs *ifaddrHead, *ifaddr;
+  /* int_8 */
+  sa_family_t family;
+  int n;
+  char *interfaceName;
+
+  if (getifaddrs(&ifaddrHead) != 0)
+    {
+      fprintf(stderr, "ifaddrs error");
+      return -1;
+    }
+
+  /* iterate through address list */
+  for (ifaddr = ifaddrHead, n = 0; ifaddr != NULL; ifaddr = ifaddr->ifa_next, n++)
+    {
+      family = ifaddr->ifa_addr->sa_family;
+      interfaceName = ifaddr->ifa_name;
+
+      if (!family || family != ipVersion || strcmp(interfaceName, interface) != 0) continue;
+
+      struct sockaddr *addr = ifaddr->ifa_addr;
+      struct sockaddr_in* addr_in = (struct sockaddr_in*) addr;
+      long int address = addr_in->sin_addr.s_addr;
+
+      freeifaddrs(ifaddrHead);
+
+      return htonl(address);
+    }
+
+  freeifaddrs(ifaddrHead);
+
+  return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -60,12 +96,26 @@ int main(int argc, char *argv[])
   {
     upnp_flow flow;
 
-    if (map)
+    if (map) /* map port */
     {
       mapInit(&flow);
       mapPort(port, &flow);
       /* let user know the external address */
       printf("download link:\nhttp://%s:%d\n", flow.externalAddress, port);
+    }
+    else /* not map port */
+    {
+      long int address;
+      if ((address = getInternalAddress("en0", AF_INET6)) < 0)
+        {
+          if ((address = getInternalAddress("en0", AF_INET)) < 0)
+            fprintf(stderr, "can't get internal address");
+        }
+
+      char *addressStr = (char*) malloc(INET6_ADDRSTRLEN);
+      inet_ntop(AF_INET6, &address, addressStr, INET6_ADDRSTRLEN);
+
+      printf("download link:\nhttp://[%s]:%d\n", addressStr, port);
     }
 
     printf("press enter to exit\n");
