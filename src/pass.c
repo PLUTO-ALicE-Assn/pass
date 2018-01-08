@@ -358,7 +358,7 @@ void serve(char* filepath, int port)
   int socketFD;
   struct sockaddr_in6 address;
 
-  if ((socketFD = socket(PF_INET6, SOCK_STREAM, 0)) < 0)
+  if ((socketFD = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
     errorExit("open socket failed");
 
   initListening(socketFD, &address, port);
@@ -367,7 +367,7 @@ void serve(char* filepath, int port)
   for (;;)
   {
     socklen_t size = sizeof(address);
-    int clientSocketFD = accept(socketFD, (struct sockaddr*) &address, &size);
+    int clientSocketFD = accept(socketFD, NULL, NULL);
     if ( clientSocketFD < 0)
     {
       perror("failed to accept connection\n");
