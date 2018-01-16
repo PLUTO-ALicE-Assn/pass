@@ -402,16 +402,17 @@ int initListen(int port)
     break;
   }
 
+  /* we've gone through the last result but still no success */
   if (pt == NULL)
     errorExit("failed to bind");
 
   freeaddrinfo(result); // free the linked-list
 
-
   if (listen(sockfd, 16) == -1) errorExit("listening failed");
 
   return sockfd;
 }
+
 /* serve a file over port */
 void serve(char* filepath, int port)
 {
