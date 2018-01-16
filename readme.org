@@ -4,6 +4,9 @@ a file transfer tool.
 point to point, no server needed.
 NAT traversal equipped.
 
+Note: pass cannot traverse LSN (Large Sacel NAT)
+see more in About Port Mapping
+
 * Build
 #+BEGIN_SRC shell
 git clone https://github.com/PLUTO-ALicE-Assn/pass.git -b stable
@@ -27,11 +30,11 @@ Open a downloaded or web browser and go to <address:port>.
 
 * About port mapping
 
-Currently pass can lmap port on only home NAT,
+Currently pass can map port on only home NATs,
 traversing Large-scale-NAT requires PCP protocol support.
 
 pass will try to ise ipv6 be default,
-so if you have ipv6 address don't map address.
+so if you have ipv6 address there is no need to map address.
 
 * Safety
 
