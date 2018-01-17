@@ -110,8 +110,11 @@ int main(int argc, char *argv[])
     else /* not map port */
     {
       long int address;
-          if ((address = getInternalAddress("en0", AF_INET)) < 0)
-            fprintf(stderr, "can't get internal address");
+      if ((address = getInternalAddress("en0", AF_INET6)) < 0 )
+      {
+        if (address = getInternalAddress("en0", AF_INET) < 0)
+          fprintf(stderr, "can't get internal address");
+      }
 
           struct in_addr addr;
           addr.s_addr = address;
